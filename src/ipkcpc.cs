@@ -26,14 +26,15 @@ internal class Client
         NetworkStream stream = new NetworkStream(socket);
 
         // Text protocol
-        TextWriter writer = new StreamWriter(stream);
-        TextReader reader = new StreamReader(stream);
+        TextReader reader = new StreamReader(stream, Encoding.UTF8);
 
         string? message = String.Empty;
         while (message != "BYE")
         {
-            var input = Console.ReadLine() ?? String.Empty;
-            writer.WriteLine(input);
+            string input = Console.ReadLine() ?? String.Empty;
+            input += "\n";
+            byte[] inputBytes = Encoding.ASCII.GetBytes(input);
+            stream.Write(inputBytes);
             message = reader.ReadLine();
             Console.WriteLine(message);
         }
