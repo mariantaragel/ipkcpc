@@ -27,12 +27,18 @@ internal class Client
 
         // Text protocol
         TextWriter writer = new StreamWriter(stream);
-        writer.WriteLine("Hello");
-
         TextReader reader = new StreamReader(stream);
-        var message = reader.ReadLine();
 
-        Console.WriteLine(message);
+        string? message = String.Empty;
+        while (message != "BYE")
+        {
+            var input = Console.ReadLine() ?? String.Empty;
+            writer.WriteLine(input);
+            message = reader.ReadLine();
+            Console.WriteLine(message);
+        }
+
+        socket.Close();
     }
 
     public void Udp()
@@ -42,7 +48,7 @@ internal class Client
         EndPoint endPoint = new IPEndPoint(address, Port);
 
         byte[] recBuffer = new byte[1024];
-        byte[] sendBuffer = GetRequestMessage();
+        byte[] sendBuffer = GetUdpRequestMessage();
 
         // Send data to the server
         socket.SendTo(sendBuffer, 0, sendBuffer.Length, SocketFlags.None, endPoint);
@@ -61,11 +67,11 @@ internal class Client
             Console.Write("ERR:");
         }
 
-        byte[] response = GetResponseMessage(recBuffer);
+        byte[] response = GetUdpResponseMessage(recBuffer);
         Console.Write(Encoding.UTF8.GetString(response));
     }
 
-    private static byte[] GetResponseMessage(byte[] recBuffer)
+    private static byte[] GetUdpResponseMessage(byte[] recBuffer)
     {
         byte[] answer = new byte[recBuffer.Length - 3];
         for (int i = 3; i < recBuffer.Length; i++)
@@ -76,7 +82,7 @@ internal class Client
         return answer;
     }
 
-    private static byte[] GetRequestMessage()
+    private static byte[] GetUdpRequestMessage()
     {
         string input = Console.ReadLine() ?? string.Empty;
         byte[] message = Encoding.ASCII.GetBytes(input);
