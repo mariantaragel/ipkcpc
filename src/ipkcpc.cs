@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using System.Text;
 using System.CommandLine;
+using System.CommandLine.Help;
 
 namespace ipkcpc;
 
@@ -157,21 +158,52 @@ internal class Udp
 
 internal class Program
 {
-    static void Main(string[] args)
+    private static async Task Main(string[] args)
     {
-        string host = args[1];
-        int port = int.Parse(args[3]);
-        string mode = args[5];
+        var hostOption = new Option<string>(
+            name: "-h",
+            description: "The IPv4 address of the server")
+        {
+            IsRequired = true,
+            ArgumentHelpName = "host"
+        };
 
-        if (mode == "tcp")
+        var portOption = new Option<int>(
+            name: "-p",
+            description: "The server port")
         {
-            Tcp clientTcp = new Tcp(host, port);
-            clientTcp.Communicate();
-        }
-        else if (mode == "udp")
-        {
-            Udp clientUdp = new Udp(host, port);
-            clientUdp.Communicate();
-        }
+            IsRequired = true,
+            ArgumentHelpName = "port"
+        };
+
+        var modeOption = new Option<string>(
+            name: "-m",
+            description: "Application mode to use") {IsRequired = true}.FromAmong("udp", "tcp");
+
+        var rootCommand = new RootCommand("Client for the IPK Calculator Protocol");
+        rootCommand.AddOption(hostOption);
+        rootCommand.AddOption(portOption);
+        rootCommand.AddOption(modeOption);
+
+        rootCommand.SetHandler((hostOptionValue, portOptionValue, modeOptionValue) =>
+            {
+                switch (modeOptionValue)
+                {
+                    case "tcp":
+                    {
+                        Tcp clientTcp = new Tcp(hostOptionValue, portOptionValue);
+                        clientTcp.Communicate();
+                        break;
+                    }
+                    case "udp":
+                    {
+                        Udp clientUdp = new Udp(hostOptionValue, portOptionValue);
+                        clientUdp.Communicate();
+                        break;
+                    }
+                }
+            }, hostOption, portOption, modeOption);
+
+        await rootCommand.InvokeAsync(args);
     }
 }
