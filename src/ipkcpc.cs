@@ -5,28 +5,33 @@ using System.CommandLine;
 
 namespace ipkcpc;
 
-internal class Client
+internal class Tcp
 {
-    public Client(string host, int port)
+    public string Host;
+    public int Port;
+    private Socket? _socket;
+    private NetworkStream? _stream;
+    private StreamReader? _reader;
+
+    public Tcp(string host, int port)
     {
         Host = host;
         Port = port;
     }
 
-    public string Host;
-    public int Port;
-
-    public void Tcp()
+    public void Communicate()
     {
+        Console.CancelKeyPress += CancelKeyPress;
+
         IPAddress address = IPAddress.Parse(Host);
-        Socket socket = new Socket(address.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+        _socket = new Socket(address.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
         IPEndPoint endPoint = new IPEndPoint(address, Port);
 
-        socket.Connect(endPoint);
-        NetworkStream stream = new NetworkStream(socket);
+        _socket.Connect(endPoint);
+        _stream = new NetworkStream(_socket);
 
         // Text protocol
-        TextReader reader = new StreamReader(stream, Encoding.UTF8);
+        _reader = new StreamReader(_stream, Encoding.UTF8);
 
         string? message = String.Empty;
         while (message != "BYE")
@@ -34,30 +39,72 @@ internal class Client
             string input = Console.ReadLine() ?? String.Empty;
             input += "\n";
             byte[] inputBytes = Encoding.ASCII.GetBytes(input);
-            stream.Write(inputBytes);
-            message = reader.ReadLine();
+            _stream.Write(inputBytes);
+            message = _reader.ReadLine();
             Console.WriteLine(message);
         }
 
-        socket.Close();
+        using (_stream)
+        using (_socket)
+        using (_reader)
+        {
+            _socket.Close();
+            _stream.Close();
+            _reader.Close();
+        }
     }
 
-    public void Udp()
+    private void CancelKeyPress(object? sender, ConsoleCancelEventArgs e)
     {
+        byte[] closingMessage = Encoding.ASCII.GetBytes("BYE\n");
+        _stream?.Write(closingMessage);
+        Console.WriteLine("BYE");
+        string? answer = _reader?.ReadLine();
+        Console.Write(answer);
+
+        using (_stream)
+        using (_socket)
+        using (_reader)
+        {
+            _stream?.Close();
+            _socket?.Close();
+            _reader?.Close();
+        }
+
+        Environment.Exit(0);
+    }
+}
+
+internal class Udp
+{
+    public string Host;
+    public int Port;
+    private Socket? _socket;
+
+    public Udp(string host, int port)
+    {
+        Host = host;
+        Port = port;
+    }
+
+    public void Communicate()
+    {
+        Console.CancelKeyPress += CancelKeyPress;
+
         IPAddress address = IPAddress.Parse(Host);
-        Socket socket = new Socket(address.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
+        _socket = new Socket(address.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
         EndPoint endPoint = new IPEndPoint(address, Port);
 
         byte[] recBuffer = new byte[1024];
         byte[] sendBuffer = GetUdpRequestMessage();
 
         // Send data to the server
-        socket.SendTo(sendBuffer, 0, sendBuffer.Length, SocketFlags.None, endPoint);
+        _socket.SendTo(sendBuffer, 0, sendBuffer.Length, SocketFlags.None, endPoint);
 
         // Receive data from the server
-        socket.ReceiveFrom(recBuffer, 0, recBuffer.Length, SocketFlags.None, ref endPoint);
-            
-        socket.Close();
+        _socket.ReceiveFrom(recBuffer, 0, recBuffer.Length, SocketFlags.None, ref endPoint);
+
+        _socket.Close();
 
         if (recBuffer[1] == 0)
         {
@@ -70,6 +117,15 @@ internal class Client
 
         byte[] response = GetUdpResponseMessage(recBuffer);
         Console.Write(Encoding.UTF8.GetString(response));
+    }
+
+    private void CancelKeyPress(object? sender, ConsoleCancelEventArgs e)
+    {
+        using (_socket)
+        {
+            _socket?.Close();
+        }
+        Environment.Exit(0);
     }
 
     private static byte[] GetUdpResponseMessage(byte[] recBuffer)
@@ -107,15 +163,15 @@ internal class Program
         int port = int.Parse(args[3]);
         string mode = args[5];
 
-        Client client = new Client(host, port);
-
         if (mode == "tcp")
         {
-            client.Tcp();
+            Tcp clientTcp = new Tcp(host, port);
+            clientTcp.Communicate();
         }
         else if (mode == "udp")
         {
-            client.Udp();
+            Udp clientUdp = new Udp(host, port);
+            clientUdp.Communicate();
         }
     }
 }
