@@ -2,7 +2,6 @@
 using System.Net.Sockets;
 using System.Text;
 using System.CommandLine;
-using System.CommandLine.Help;
 
 namespace ipkcpc;
 
@@ -24,34 +23,41 @@ internal class Tcp
     {
         Console.CancelKeyPress += CancelKeyPress;
 
-        IPAddress address = IPAddress.Parse(Host);
-        _socket = new Socket(address.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-        IPEndPoint endPoint = new IPEndPoint(address, Port);
-
-        _socket.Connect(endPoint);
-        _stream = new NetworkStream(_socket);
-
-        // Text protocol
-        _reader = new StreamReader(_stream, Encoding.UTF8);
-
-        string? message = String.Empty;
-        while (message != "BYE")
+        try
         {
-            string input = Console.ReadLine() ?? String.Empty;
-            input += "\n";
-            byte[] inputBytes = Encoding.ASCII.GetBytes(input);
-            _stream.Write(inputBytes);
-            message = _reader.ReadLine();
-            Console.WriteLine(message);
+            IPAddress address = IPAddress.Parse(Host);
+            _socket = new Socket(address.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+            IPEndPoint endPoint = new IPEndPoint(address, Port);
+
+            _socket.Connect(endPoint);
+            _stream = new NetworkStream(_socket);
+
+            // Text protocol
+            _reader = new StreamReader(_stream, Encoding.UTF8);
+
+            string? message = string.Empty;
+            while (message != "BYE")
+            {
+                string input = Console.ReadLine() ?? string.Empty;
+                input += "\n";
+                byte[] inputBytes = Encoding.ASCII.GetBytes(input);
+                _stream.Write(inputBytes);
+                message = _reader.ReadLine();
+                Console.WriteLine(message);
+            }
+
+            using (_stream)
+            using (_socket)
+            using (_reader)
+            {
+                _socket.Close();
+                _stream.Close();
+                _reader.Close();
+            }
         }
-
-        using (_stream)
-        using (_socket)
-        using (_reader)
+        catch (Exception e)
         {
-            _socket.Close();
-            _stream.Close();
-            _reader.Close();
+            Console.WriteLine(e);
         }
     }
 
@@ -92,32 +98,41 @@ internal class Udp
     {
         Console.CancelKeyPress += CancelKeyPress;
 
-        IPAddress address = IPAddress.Parse(Host);
-        _socket = new Socket(address.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
-        EndPoint endPoint = new IPEndPoint(address, Port);
-
-        byte[] recBuffer = new byte[1024];
-        byte[] sendBuffer = GetUdpRequestMessage();
-
-        // Send data to the server
-        _socket.SendTo(sendBuffer, 0, sendBuffer.Length, SocketFlags.None, endPoint);
-
-        // Receive data from the server
-        _socket.ReceiveFrom(recBuffer, 0, recBuffer.Length, SocketFlags.None, ref endPoint);
-
-        _socket.Close();
-
-        if (recBuffer[1] == 0)
+        try
         {
-            Console.Write("OK:");
-        }
-        else if (recBuffer[1] == 1)
-        {
-            Console.Write("ERR:");
-        }
+            while (true)
+            {
+                IPAddress address = IPAddress.Parse(Host);
+                _socket = new Socket(address.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
+                EndPoint endPoint = new IPEndPoint(address, Port);
 
-        byte[] response = GetUdpResponseMessage(recBuffer);
-        Console.Write(Encoding.UTF8.GetString(response));
+                byte[] recBuffer = new byte[1024];
+                byte[] sendBuffer = GetUdpRequestMessage();
+
+                // Send data to the server
+                _socket.SendTo(sendBuffer, 0, sendBuffer.Length, SocketFlags.None, endPoint);
+
+                // Receive data from the server
+                _socket.ReceiveFrom(recBuffer, 0, recBuffer.Length, SocketFlags.None, ref endPoint);
+
+                switch (recBuffer[1])
+                {
+                    case 0:
+                        Console.Write("OK:");
+                        break;
+                    case 1:
+                        Console.Write("ERR:");
+                        break;
+                }
+
+                byte[] response = GetUdpResponseMessage(recBuffer);
+                Console.WriteLine(Encoding.UTF8.GetString(response));
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
     }
 
     private void CancelKeyPress(object? sender, ConsoleCancelEventArgs e)
@@ -178,7 +193,8 @@ internal class Program
 
         var modeOption = new Option<string>(
             name: "-m",
-            description: "Application mode to use") {IsRequired = true}.FromAmong("udp", "tcp");
+            description: "Application mode to use")
+        { IsRequired = true }.FromAmong("udp", "tcp");
 
         var rootCommand = new RootCommand("Client for the IPK Calculator Protocol");
         rootCommand.AddOption(hostOption);
@@ -186,23 +202,23 @@ internal class Program
         rootCommand.AddOption(modeOption);
 
         rootCommand.SetHandler((hostOptionValue, portOptionValue, modeOptionValue) =>
+        {
+            switch (modeOptionValue)
             {
-                switch (modeOptionValue)
-                {
-                    case "tcp":
+                case "tcp":
                     {
                         Tcp clientTcp = new Tcp(hostOptionValue, portOptionValue);
                         clientTcp.Communicate();
                         break;
                     }
-                    case "udp":
+                case "udp":
                     {
                         Udp clientUdp = new Udp(hostOptionValue, portOptionValue);
                         clientUdp.Communicate();
                         break;
                     }
-                }
-            }, hostOption, portOption, modeOption);
+            }
+        }, hostOption, portOption, modeOption);
 
         await rootCommand.InvokeAsync(args);
     }
