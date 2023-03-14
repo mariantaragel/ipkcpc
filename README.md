@@ -6,12 +6,12 @@ Projekt je rozdelený do troch tried a to `Program`, `Udp` a `Tcp`. `Program` je 
 
 ## UML Diagram
 ```c
-			 +-----------+
-			 |  Program  |
-			 |-----------|
-			 |-----------|
-			 | + Main()  |
-			 +-----------+
+		 +-----------+
+		 |  Program  |
+		 |-----------|
+		 |-----------|
+		 | + Main()  |
+		 +-----------+
 
 +-----------------+ +-----------------+
 |       Udp       | |       Tcp       |

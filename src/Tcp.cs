@@ -4,7 +4,7 @@ using System.Text;
 
 namespace ipkcpc;
 
-public class Tcp
+internal class Tcp
 {
     public string Host;
     public int Port;
