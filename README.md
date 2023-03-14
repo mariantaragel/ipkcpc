@@ -1,2 +1,39 @@
-# IPK-Projekt-1
+# IPK Projekt 1
+Cieæom projektu je vytvoriù klienta ku vzdialenej kalkulaËke, ktor˝ bude komunikovaù pomocou protokolu IPK Calculator Protocol.
 
+## ätrukt˙ra projektu
+Projekt je rozdelen˝ do troch tried a to `Program`, `Udp` a `Tcp`. `Program` je z·kladn· trieda, ktor· obsahuje metÛdu `Main()`, ktor· je vstupn˝m bodom programu. Triedy `Udp` a `Tcp` poskytuj˙ metÛdy pre komunik·ciu pomocou UDP/TCP protokolu. 
+
+## UML Diagram
+```c
+			 +-----------+
+			 |  Program  |
+			 |-----------|
+			 |-----------|
+			 | + Main()  |
+			 +-----------+
+
++-----------------+ +-----------------+
+|       Udp       | |       Tcp       |
+|-----------------| |-----------------|
+| + Host          | | + Host          |
+| + Port          | | + Port          |
+|-----------------| |-----------------|
+| + Communicate() | | + Communicate() |
++-----------------+ +-----------------+
+```
+
+## TeÛria
+V nasleduj˙cej Ëasti struËne zhrniem teÛriu nutn˙ k pochopeniu funkcionality implementovanej aplik·cie. Zameriam sa hlavne na na dva protokoly transportnej vrstvy a to UDP a TCP. Vych·dzaù budem z nasleduj˙cich zdrojov [1], [2]. a [3]
+
+### UDP
+
+
+### TCP
+
+## Testovanie
+
+## Bibliografia
+[1] KUROSE, James F. a Keith W. ROSS. <em>Computer networking: a top-down approach</em>. Eighth edition.; Global edition. Harlow: Pearson Education Limited, 2022, ISBN 978-1-292-40546-9.<br/>
+[2]<br/>
+[3]
