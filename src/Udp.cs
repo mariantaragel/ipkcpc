@@ -22,12 +22,14 @@ internal class Udp
 
         try
         {
+            // Create IP endpoint from server IP address and port
+            IPAddress address = IPAddress.Parse(Host);
+            _socket = new Socket(address.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
+            EndPoint endPoint = new IPEndPoint(address, Port);
+
             while (true)
             {
-                IPAddress address = IPAddress.Parse(Host);
-                _socket = new Socket(address.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
-                EndPoint endPoint = new IPEndPoint(address, Port);
-
+                // Buffers to send and receive messages
                 byte[] recBuffer = new byte[1024];
                 byte[] sendBuffer = GetUdpRequestMessage();
 
@@ -37,16 +39,8 @@ internal class Udp
                 // Receive data from the server
                 _socket.ReceiveFrom(recBuffer, 0, recBuffer.Length, SocketFlags.None, ref endPoint);
 
-                switch (recBuffer[1])
-                {
-                    case 0:
-                        Console.Write("OK:");
-                        break;
-                    case 1:
-                        Console.Write("ERR:");
-                        break;
-                }
-
+                // Print server answer
+                PrintStatusCode(recBuffer[1]);
                 byte[] response = GetUdpResponseMessage(recBuffer);
                 Console.WriteLine(Encoding.UTF8.GetString(response));
             }
@@ -59,31 +53,58 @@ internal class Udp
 
     private void CancelKeyPress(object? sender, ConsoleCancelEventArgs e)
     {
+        FreeResources();
+        Environment.Exit(0);
+    }
+
+    private void FreeResources()
+    {
         using (_socket)
         {
             _socket?.Close();
         }
-        Environment.Exit(0);
+    }
+
+    private static void PrintStatusCode(byte statusCode)
+    {
+        switch (statusCode)
+        {
+            case 0:
+                Console.Write("OK:");
+                break;
+            case 1:
+                Console.Write("ERR:");
+                break;
+        }
     }
 
     private static byte[] GetUdpResponseMessage(byte[] recBuffer)
     {
-        byte[] answer = new byte[recBuffer.Length - 3];
-        for (int i = 3; i < recBuffer.Length; i++)
+        // Remove IPK Calculator Protocol header
+        byte[] answer = new byte[recBuffer[2]];
+        for (int i = 3; i < recBuffer[2] + 3; i++)
         {
             answer[i - 3] = recBuffer[i];
         }
-
         return answer;
     }
 
-    private static byte[] GetUdpRequestMessage()
+    private byte[] GetUdpRequestMessage()
     {
         string input = Console.ReadLine() ?? string.Empty;
+        if (input == string.Empty)
+        {
+            FreeResources();
+            Environment.Exit(0);
+        }
+
         byte[] message = Encoding.ASCII.GetBytes(input);
         byte[] buffer = new byte[message.Length + 2];
+
+        // Add IPK Calculator Protocol header
         buffer[0] = 0;
         buffer[1] = (byte)buffer.Length;
+
         for (int i = 2; i < buffer.Length; i++)
         {
             buffer[i] = message[i - 2];
