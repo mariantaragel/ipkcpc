@@ -69,11 +69,6 @@ internal class Tcp
     private string GetInput()
     {
         string input = Console.ReadLine() ?? string.Empty;
-        if (input == string.Empty)
-        {
-            FreeResources();
-            Environment.Exit(0);
-        }
 
         return input;
     }

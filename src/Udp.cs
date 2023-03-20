@@ -94,8 +94,10 @@ internal class Udp
         string input = Console.ReadLine() ?? string.Empty;
         if (input == string.Empty)
         {
-            FreeResources();
-            Environment.Exit(0);
+            byte[] send = new byte[2];
+            send[0] = 0;
+            send[1] = (byte)send.Length;
+            return send;
         }
 
         byte[] message = Encoding.ASCII.GetBytes(input);
