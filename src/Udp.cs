@@ -24,8 +24,10 @@ internal class Udp
         {
             // Create IP endpoint from server IP address and port
             IPAddress address = IPAddress.Parse(Host);
-            _socket = new Socket(address.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
             EndPoint endPoint = new IPEndPoint(address, Port);
+
+            _socket = new Socket(address.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
+            _socket.ReceiveTimeout = 5000;
 
             while (true)
             {
@@ -94,10 +96,8 @@ internal class Udp
         string input = Console.ReadLine() ?? string.Empty;
         if (input == string.Empty)
         {
-            byte[] send = new byte[2];
-            send[0] = 0;
-            send[1] = (byte)send.Length;
-            return send;
+            FreeResources();
+            Environment.Exit(0);
         }
 
         byte[] message = Encoding.ASCII.GetBytes(input);
